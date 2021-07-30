@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Reflection;
+using System.Dynamic;
 
 namespace ConsoleApp
 {
@@ -14,6 +16,12 @@ namespace ConsoleApp
             mylist.Add(new("FIRST", "NAME", "NULL"));
 
             Console.WriteLine($"==================FIRST=================\n");
+            foreach (BaseObj obj in mylist)
+                Console.WriteLine($"{obj.Dll}: {obj.Code}, {obj.Name}");
+
+            dynamic functionfromcls1 = new FunctionFromCLS1();
+            functionfromcls1.FunctionCls(mylist, "dynamic");
+            Console.WriteLine($"==================AFTER dynamic=================\n");
             foreach (BaseObj obj in mylist)
                 Console.WriteLine($"{obj.Dll}: {obj.Code}, {obj.Name}");
 
@@ -66,6 +74,7 @@ namespace ConsoleApp
             Console.ReadKey();
         }
     }
+   
     public class BaseObj
     {
         public string Code;
@@ -77,6 +86,38 @@ namespace ConsoleApp
             Code = code;
             Name = name;
             Dll = $"{dll} ({adds})";
+        }
+    }
+
+    public class FunctionFromCLS1 : DynamicObject
+    {
+        public override bool TryInvokeMember (
+            InvokeMemberBinder binder, 
+            object[] args,
+            out object result)
+        {
+            Console.WriteLine (binder.Name + " was called");
+
+            #region ClassLibrary1
+            Assembly asm = null;
+            try { asm = Assembly.LoadFile($"{Directory.GetCurrentDirectory()}\\ClassLibrary1.dll"); }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
+
+            Type tp;
+            try
+            {
+                tp = asm.GetType("ClassLibrary1.FunctionCls");
+                object ob = Activator.CreateInstance(tp);
+                MethodInfo mi;
+                mi = tp.GetMethod("CreateList");
+                mi.Invoke(ob, args);
+            }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
+            #endregion
+
+
+            result = null;
+            return true;
         }
     }
 }
